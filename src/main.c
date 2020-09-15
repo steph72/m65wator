@@ -13,8 +13,8 @@
 #define WT_SHARK 2
 
 #define WIDTH 80
-#define HEIGHT 50
-#define WSIZE 4000
+#define HEIGHT 48
+#define WSIZE WIDTH *HEIGHT
 
 #define UPDATE_SCREEN lcopy((long)canvas, 0xff80000, WSIZE)
 
@@ -29,7 +29,6 @@ byte *vic3_scnptr1 = (byte *)0xd063;
 
 byte *canvas;
 byte *sharkEnergy;
-
 byte *surviveTime;
 
 byte dirPermutations[16][4] = {
@@ -130,14 +129,10 @@ void doFish(int idx)
     byte dir;
     byte *dirPermutation;
     int newIdx;
-    int indexToGo;
-    byte didMove;
 
     byte s;
 
     dirPermutation = dirPermutations[rand() % 16];
-
-    didMove = false;
 
     s = ++surviveTime[idx];
 
@@ -157,28 +152,20 @@ void doFish(int idx)
 
         if (canvas[newIdx] == WT_WATER)
         {
-            didMove = true;
-            indexToGo = newIdx;
-            break;
+            canvas[newIdx] = WT_FISH;
+            surviveTime[newIdx] = s;
+            canvas[idx] = WT_WATER;
+            if (s > fishTimeToReproduce)
+            {
+                {
+                    canvas[idx] = WT_FISH;
+                    surviveTime[idx] = 0;
+                }
+            }
+            return;
         }
     }
 
-    if (!didMove)
-    {
-        return;
-    }
-
-    canvas[indexToGo] = WT_FISH;
-    surviveTime[indexToGo] = s;
-    canvas[idx] = WT_WATER;
-
-    if (s > fishTimeToReproduce)
-    {
-        {
-            canvas[idx] = WT_FISH;
-            surviveTime[idx] = 0;
-        }
-    }
 }
 
 void doShark(int idx)
