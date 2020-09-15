@@ -173,6 +173,7 @@ void doShark(int idx)
     byte i;
     byte dir;
     unsigned int newIdx;
+    byte ctest;
 
     int newSharkIndex = idx;
     byte didEat = false;
@@ -192,14 +193,16 @@ void doShark(int idx)
             newIdx -= WSIZE;
         }
 
-        if (canvas[newIdx] == WT_FISH)
+        ctest = canvas[newIdx];
+
+        if (ctest == WT_FISH)
         {
             didEat = true;
             newSharkIndex = newIdx;
             break;
         }
 
-        if (canvas[newIdx] == WT_WATER)
+        if (ctest == WT_WATER)
         {
             newSharkIndex = newIdx;
         }
