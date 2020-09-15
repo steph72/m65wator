@@ -15,6 +15,7 @@
 #define WIDTH 80
 #define HEIGHT 48
 #define WSIZE WIDTH *HEIGHT
+#define WSIZE2 WSIZE*2
 
 #define UPDATE_SCREEN lcopy((long)canvas, 0xff80000, WSIZE)
 
@@ -128,7 +129,7 @@ void doFish(int idx)
     byte i;
     byte dir;
     byte *dirPermutation;
-    int newIdx;
+    unsigned int newIdx;
 
     byte s;
 
@@ -141,7 +142,7 @@ void doFish(int idx)
         dir = dirPermutation[i];
         newIdx = idx + directions[dir];
 
-        if (newIdx < 0)
+        if (newIdx > WSIZE2)
         {
             newIdx += WSIZE;
         }
@@ -165,28 +166,24 @@ void doFish(int idx)
             return;
         }
     }
-
 }
 
 void doShark(int idx)
 {
     byte i;
     byte dir;
-    byte *dirPermutation;
-    int newIdx;
-    int newSharkIndex;
-    byte didEat;
+    unsigned int newIdx;
 
-    dirPermutation = dirPermutations[rand() % 16];
-    newSharkIndex = idx;
-    didEat = false;
+    int newSharkIndex = idx;
+    byte didEat = false;
+    byte *dirPermutation = dirPermutations[rand() % 16];
 
     for (i = 0; i < 4; ++i)
     {
         dir = dirPermutation[i];
         newIdx = idx + directions[dir];
 
-        if (newIdx < 0)
+        if (newIdx > WSIZE2)
         {
             newIdx += WSIZE;
         }
@@ -217,6 +214,13 @@ void doShark(int idx)
         surviveTime[newSharkIndex] = surviveTime[idx];
         sharkEnergy[newSharkIndex] = sharkEnergy[idx];
         canvas[idx] = WT_WATER;
+        if (surviveTime[newSharkIndex] >= sharkTimeToReproduce)
+        {
+            canvas[idx] = WT_SHARK;
+            surviveTime[idx] = 0;
+            surviveTime[newSharkIndex] = 0;
+            sharkEnergy[idx] = initialSharkEnergy;
+        }
     }
 
     if (didEat)
@@ -237,27 +241,16 @@ void doShark(int idx)
         }
     }
 
-    if (surviveTime[newSharkIndex] >= sharkTimeToReproduce)
-    {
-        if (idx != newSharkIndex)
-        {
-            canvas[idx] = WT_SHARK;
-            surviveTime[idx] = 0;
-            surviveTime[newSharkIndex] = 0;
-            sharkEnergy[idx] = initialSharkEnergy;
-        }
-    }
-
     ++surviveTime[newSharkIndex];
 }
 
 long mainloop(void)
 {
-    int i;
+    unsigned int i;
     long generations = 0;
     byte t;
 
-    int numSharks;
+    unsigned int numSharks;
 
     do
     {
@@ -274,11 +267,12 @@ long mainloop(void)
             }
             else if (t == WT_SHARK)
             {
-                numSharks++;
+                ++numSharks;
                 doShark(i);
             }
         }
         UPDATE_SCREEN;
+        // cgetc();
     } while (numSharks && !kbhit());
 
     return generations;
