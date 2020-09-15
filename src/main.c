@@ -126,18 +126,20 @@ void setWatorScreen()
 
 void doFish(int idx)
 {
-    register byte i;
+    byte i;
     byte dir;
-    register byte *dirPermutation;
+    byte *dirPermutation;
     int newIdx;
     int indexToGo;
     byte didMove;
+
+    byte s;
 
     dirPermutation = dirPermutations[rand() % 16];
 
     didMove = false;
 
-    surviveTime[idx]++;
+    s = ++surviveTime[idx];
 
     for (i = 0; i < 4; ++i)
     {
@@ -167,10 +169,10 @@ void doFish(int idx)
     }
 
     canvas[indexToGo] = WT_FISH;
-    surviveTime[indexToGo] = surviveTime[idx];
+    surviveTime[indexToGo] = s;
     canvas[idx] = WT_WATER;
 
-    if (surviveTime[indexToGo] > fishTimeToReproduce)
+    if (s > fishTimeToReproduce)
     {
         {
             canvas[idx] = WT_FISH;
@@ -181,8 +183,8 @@ void doFish(int idx)
 
 void doShark(int idx)
 {
-    register byte i;
-    register byte dir;
+    byte i;
+    byte dir;
     byte *dirPermutation;
     int newIdx;
     int newSharkIndex;
@@ -219,7 +221,7 @@ void doShark(int idx)
         }
     }
 
-    sharkEnergy[idx]--;
+    --sharkEnergy[idx];
 
     if (newSharkIndex != idx)
     {
@@ -235,7 +237,7 @@ void doShark(int idx)
         // shark did eat -- increase energy
         if (sharkEnergy[newSharkIndex] < 255)
         {
-            sharkEnergy[newSharkIndex] = sharkEnergy[newSharkIndex] + 1;
+            ++sharkEnergy[newSharkIndex];
         }
     }
     else
@@ -259,13 +261,14 @@ void doShark(int idx)
         }
     }
 
-    surviveTime[newSharkIndex] += 1;
+    ++surviveTime[newSharkIndex];
 }
 
 long mainloop(void)
 {
     int i;
     long generations = 0;
+    byte t;
 
     int numSharks;
 
@@ -276,11 +279,13 @@ long mainloop(void)
 
         for (i = 0; i < WSIZE; ++i)
         {
-            if (canvas[i] == WT_FISH)
+            t = canvas[i];
+
+            if (t == WT_FISH)
             {
                 doFish(i);
             }
-            else if (canvas[i] == WT_SHARK)
+            else if (t == WT_SHARK)
             {
                 numSharks++;
                 doShark(i);
