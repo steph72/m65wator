@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <stddef.h>
+// #include <stddef.h>
 #include <stdio.h>
 #include <conio.h>
 #include <c64.h>
@@ -37,7 +37,7 @@ byte dirPermutations[16][4] = {
     {0, 2, 1, 3},
     {2, 1, 3, 0},
     {1, 3, 0, 2},
-    {3, 0, 1, 2},
+    {3, 0, 2, 1},
 
     {3, 2, 1, 0},
     {2, 1, 0, 3},
@@ -134,11 +134,10 @@ void doFish(int idx)
     byte didMove;
 
     dirPermutation = dirPermutations[rand() % 16];
-    indexToGo = 0xffff;
 
     didMove = false;
 
-    surviveTime[idx] += 1;
+    surviveTime[idx]++;
 
     for (i = 0; i < 4; ++i)
     {
@@ -162,16 +161,14 @@ void doFish(int idx)
         }
     }
 
-    if (didMove)
-    {
-        canvas[indexToGo] = WT_FISH;
-        surviveTime[indexToGo] = surviveTime[idx];
-        canvas[idx] = WT_WATER;
-    }
-    else
+    if (!didMove)
     {
         return;
     }
+
+    canvas[indexToGo] = WT_FISH;
+    surviveTime[indexToGo] = surviveTime[idx];
+    canvas[idx] = WT_WATER;
 
     if (surviveTime[indexToGo] > fishTimeToReproduce)
     {
@@ -222,7 +219,7 @@ void doShark(int idx)
         }
     }
 
-    sharkEnergy[idx] -= 1;
+    sharkEnergy[idx]--;
 
     if (newSharkIndex != idx)
     {
@@ -339,44 +336,44 @@ void main()
         cputs("== s.kleinert, september 2020 ==\r\n");
         cputs("================================\r\n\r\n");
 
-        printf("\nfish time to reproduce (1-255) [30]:\n");
+        printf("\nfish time to reproduce (1-255) [6]:\n");
         fgets(buf, 8, stdin);
         fishTimeToReproduce = atoi(buf);
         if (!fishTimeToReproduce)
         {
-            fishTimeToReproduce = 30;
+            fishTimeToReproduce = 6;
         }
 
-        printf("\nsharks time to reproduce (1-255) [60]:\n");
+        printf("\nsharks time to reproduce (1-255) [7]:\n");
         fgets(buf, 8, stdin);
         sharkTimeToReproduce = atoi(buf);
         if (!sharkTimeToReproduce)
         {
-            sharkTimeToReproduce = 60;
+            sharkTimeToReproduce = 7;
         }
 
-        printf("\ninitial shark energy (1-255) [40]:\n");
+        printf("\ninitial shark energy (1-255) [4]:\n");
         fgets(buf, 8, stdin);
         initialSharkEnergy = atoi(buf);
         if (!initialSharkEnergy)
         {
-            initialSharkEnergy = 40;
+            initialSharkEnergy = 4;
         }
 
-        printf("\n# of initial sharks (1-4000) [20]:\n");
+        printf("\n# of initial sharks (1-4000) [500]:\n");
         fgets(buf, 8, stdin);
         initialSharks = atoi(buf);
         if (!initialSharks)
         {
-            initialSharks = 20;
+            initialSharks = 500;
         }
 
-        printf("\n# of initial fish (1-4000) [80]:\n");
+        printf("\n# of initial fish (1-4000) [500]:\n");
         fgets(buf, 8, stdin);
         initialFish = atoi(buf);
         if (!initialFish)
         {
-            initialFish = 80;
+            initialFish = 500;
         }
 
         setWatorScreen();
