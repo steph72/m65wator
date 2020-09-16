@@ -417,15 +417,14 @@ void main()
             initialSharkEnergy = getValue(1, 255, initialSharkEnergy);
             break;
 
-        case '4':
+        case '5':
             initialSharks = getValue(1, 3000, initialSharks);
             break;
 
-        case '5':
+        case '4':
             initialFish = getValue(1, 3000, initialFish);
             break;
 
-        case '\n':
         case 's':
         {
             setWatorScreen();
