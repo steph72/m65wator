@@ -1,21 +1,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 // #include <stddef.h>
-#include <stdio.h>
 #include <conio.h>
 #include <c64.h>
-
 #include "types.h"
 #include "memory.h"
+#include "utils.h"
 
 #define WT_WATER 6
 #define WT_FISH 5
 #define WT_SHARK 2
 
 #define WIDTH 80
-#define HEIGHT 48
+#define HEIGHT 50
 #define WSIZE WIDTH *HEIGHT
-#define WSIZE2 WSIZE*2
+#define WSIZE2 WSIZE * 2
 
 #define UPDATE_SCREEN lcopy((long)canvas, 0xff80000, WSIZE)
 
@@ -58,11 +57,30 @@ byte dirPermutations[16][4] = {
 
 signed char directions[4] = {-1, 1, -WIDTH, WIDTH};
 
-byte fishTimeToReproduce = 30;
-byte sharkTimeToReproduce = 60;
-byte initialSharkEnergy = 40;
-int initialSharks = 20;
-int initialFish = 80;
+byte _fishTimeToReproduce = 10;
+byte _sharkTimeToReproduce = 50;
+byte _initialSharkEnergy = 40;
+int _initialSharks = 100;
+int _initialFish = 180;
+
+byte fishTimeToReproduce;
+byte sharkTimeToReproduce;
+byte initialSharkEnergy;
+int initialSharks;
+int initialFish;
+
+unsigned int idx;
+
+void doFish(void);
+
+void initDefaults()
+{
+    fishTimeToReproduce = _fishTimeToReproduce;
+    sharkTimeToReproduce = _sharkTimeToReproduce;
+    initialSharkEnergy = _initialSharkEnergy;
+    initialSharks = _initialSharks;
+    initialFish = _initialFish;
+}
 
 void init()
 {
@@ -75,10 +93,6 @@ void init()
     POKE(0xd100U + 6, 0);
     POKE(0xd200U + 6, 2); // nice sea blue
     POKE(0xd300U + 6, 4);
-
-    canvas = (byte *)malloc(WSIZE);
-    sharkEnergy = (byte *)malloc(WSIZE);
-    surviveTime = (byte *)malloc(WSIZE);
 }
 
 void dealloc()
@@ -86,6 +100,28 @@ void dealloc()
     free(canvas);
     free(sharkEnergy);
     free(surviveTime);
+}
+
+char getkey(byte cursorFlag)
+{
+    char res;
+    if (cursorFlag)
+    {
+        cursor(1);
+    }
+
+    while (kbhit())
+    {
+        cgetc();
+    }
+
+    res = cgetc();
+
+    if (cursorFlag)
+    {
+        cursor(0);
+    }
+    return res;
 }
 
 void setTextScreen()
@@ -116,31 +152,23 @@ void setWatorScreen()
     *vic3_scnptr1 = 0x00;
 
     lfill(0x40000, 81, WSIZE); // fill text screen with solid circles
-    lfill((long)canvas, WT_WATER, WSIZE);
-
-    lfill((long)sharkEnergy, initialSharkEnergy, WSIZE);
-    lfill((long)surviveTime, 0, WSIZE);
 
     UPDATE_SCREEN;
 }
 
-void doFish(int idx)
+void doFish(void)
 {
     byte i;
-    byte dir;
-    byte *dirPermutation;
     unsigned int newIdx;
-
     byte s;
 
-    dirPermutation = dirPermutations[rand() % 16];
+    byte *dirPermutation = dirPermutations[rand() % 16];
 
     s = ++surviveTime[idx];
 
     for (i = 0; i < 4; ++i)
     {
-        dir = dirPermutation[i];
-        newIdx = idx + directions[dir];
+        newIdx = idx + directions[dirPermutation[i]];
 
         if (newIdx > WSIZE2)
         {
@@ -158,20 +186,20 @@ void doFish(int idx)
             canvas[idx] = WT_WATER;
             if (s > fishTimeToReproduce)
             {
-                {
-                    canvas[idx] = WT_FISH;
-                    surviveTime[idx] = 0;
-                }
+                canvas[idx] = WT_FISH;
+                surviveTime[idx] = 0;
+                surviveTime[newIdx] = 0;
             }
             return;
         }
     }
 }
 
-void doShark(int idx)
+void doShark(void)
 {
     byte i;
-    byte dir;
+    byte s;
+    byte currentEnergy;
     unsigned int newIdx;
     byte ctest;
 
@@ -179,10 +207,11 @@ void doShark(int idx)
     byte didEat = false;
     byte *dirPermutation = dirPermutations[rand() % 16];
 
+    s = ++surviveTime[newSharkIndex];
+
     for (i = 0; i < 4; ++i)
     {
-        dir = dirPermutation[i];
-        newIdx = idx + directions[dir];
+        newIdx = idx + directions[dirPermutation[i]];
 
         if (newIdx > WSIZE2)
         {
@@ -208,16 +237,22 @@ void doShark(int idx)
         }
     }
 
-    --sharkEnergy[idx];
+    currentEnergy = --sharkEnergy[idx];
+
+    if (!currentEnergy)
+    {
+        canvas[idx] = WT_WATER;
+        return;
+    }
 
     if (newSharkIndex != idx)
     {
         // move
         canvas[newSharkIndex] = WT_SHARK;
-        surviveTime[newSharkIndex] = surviveTime[idx];
-        sharkEnergy[newSharkIndex] = sharkEnergy[idx];
+        surviveTime[newSharkIndex] = s;
+        sharkEnergy[newSharkIndex] = currentEnergy;
         canvas[idx] = WT_WATER;
-        if (surviveTime[newSharkIndex] >= sharkTimeToReproduce)
+        if (s >= sharkTimeToReproduce)
         {
             canvas[idx] = WT_SHARK;
             surviveTime[idx] = 0;
@@ -229,27 +264,15 @@ void doShark(int idx)
     if (didEat)
     {
         // shark did eat -- increase energy
-        if (sharkEnergy[newSharkIndex] < 255)
+        if (currentEnergy < 255)
         {
             ++sharkEnergy[newSharkIndex];
         }
     }
-    else
-    {
-        // check shark energy
-        if (sharkEnergy[newSharkIndex] == 0)
-        {
-            canvas[newSharkIndex] = WT_WATER;
-            return;
-        }
-    }
-
-    ++surviveTime[newSharkIndex];
 }
 
 long mainloop(void)
 {
-    unsigned int i;
     long generations = 0;
     byte t;
 
@@ -260,23 +283,24 @@ long mainloop(void)
         generations++;
         numSharks = 0;
 
-        for (i = 0; i < WSIZE; ++i)
+        for (idx = 0; idx < WSIZE; ++idx)
         {
-            t = canvas[i];
+            t = canvas[idx];
 
             if (t == WT_FISH)
             {
-                doFish(i);
+                doFish();
             }
             else if (t == WT_SHARK)
             {
                 ++numSharks;
-                doShark(i);
+                doShark();
             }
         }
         UPDATE_SCREEN;
-        // cgetc();
+
     } while (numSharks && !kbhit());
+    cgetc();
 
     return generations;
 }
@@ -285,6 +309,17 @@ void initWorld(int numFish, int numSharks)
 {
     int i;
     byte x, y;
+
+    srand(290672); // fix random seed for reproducible results
+
+    canvas = (byte *)malloc(WSIZE);
+    sharkEnergy = (byte *)malloc(WSIZE);
+    surviveTime = (byte *)malloc(WSIZE);
+
+    lfill((long)canvas, WT_WATER, WSIZE);
+    lfill((long)sharkEnergy, initialSharkEnergy, WSIZE);
+    lfill((long)surviveTime, 0, WSIZE);
+
     for (i = 0; i < numFish; ++i)
     {
         do
@@ -306,82 +341,106 @@ void initWorld(int numFish, int numSharks)
     UPDATE_SCREEN;
 }
 
+int getValue(int min, int max, int stdVal)
+{
+    int retVal;
+    char buf[10];
+
+    textcolor(COLOR_LIGHTRED);
+    cprintf("\r\n  new value (%d-%d): ", min, max);
+    fgets(buf, 8, stdin);
+    retVal = atoi(buf);
+    if (!retVal || retVal < min || retVal > max)
+    {
+        retVal = stdVal;
+    }
+    return retVal;
+}
+
 void main()
 {
     long gens;
-    char yn;
-    char buf[10];
+    char cmd;
+    byte quit = false;
+
+    initDefaults();
 
     do
     {
         init();
-
-        textcolor(COLOR_GREEN);
-        bordercolor(COLOR_BLUE);
-        bgcolor(COLOR_BLACK);
-        clrscr();
-        cputs("================================\r\n");
-        cputs("== wa-tor for the mega65      ==\r\n");
-        cputs("== s.kleinert, september 2020 ==\r\n");
-        cputs("================================\r\n\r\n");
-
-        printf("\nfish time to reproduce (1-255) [6]:\n");
-        fgets(buf, 8, stdin);
-        fishTimeToReproduce = atoi(buf);
-        if (!fishTimeToReproduce)
-        {
-            fishTimeToReproduce = 6;
-        }
-
-        printf("\nsharks time to reproduce (1-255) [7]:\n");
-        fgets(buf, 8, stdin);
-        sharkTimeToReproduce = atoi(buf);
-        if (!sharkTimeToReproduce)
-        {
-            sharkTimeToReproduce = 7;
-        }
-
-        printf("\ninitial shark energy (1-255) [4]:\n");
-        fgets(buf, 8, stdin);
-        initialSharkEnergy = atoi(buf);
-        if (!initialSharkEnergy)
-        {
-            initialSharkEnergy = 4;
-        }
-
-        printf("\n# of initial sharks (1-4000) [500]:\n");
-        fgets(buf, 8, stdin);
-        initialSharks = atoi(buf);
-        if (!initialSharks)
-        {
-            initialSharks = 500;
-        }
-
-        printf("\n# of initial fish (1-4000) [500]:\n");
-        fgets(buf, 8, stdin);
-        initialFish = atoi(buf);
-        if (!initialFish)
-        {
-            initialFish = 500;
-        }
-
-        setWatorScreen();
-        initWorld(initialFish, initialSharks);
-        gens = mainloop();
-        dealloc();
-
         setTextScreen();
-        cbm_k_bsout(147);
-        printf("simulation ended after %ld generations\nagain?(y/n)", gens);
-        // empty buffer
-        while (kbhit())
+
+        textcolor(COLOR_GRAY3);
+        bordercolor(COLOR_BLACK);
+        bgcolor(COLOR_BLUE);
+        clrscr();
+        gotoxy(0, 1);
+
+        chline(40);
+        cputs("wa-tor for the mega65\r\n");
+        cputs("s kleinert, september 2020\r\n");
+        chline(40);
+
+        textcolor(COLOR_PURPLE);
+        cputsxy(2, 7, "1) instructions\r\n\r\n");
+
+        textcolor(COLOR_LIGHTBLUE);
+        cprintf("  2) fish reproduction time  : %4d\r\n", fishTimeToReproduce);
+        cprintf("  3) shark reproduction time : %4d\r\n", sharkTimeToReproduce);
+        cprintf("  4) initial shark energy    : %4d\r\n", initialSharkEnergy);
+        cprintf("  5) initial # of fish       : %4d\r\n", initialFish);
+        cprintf("  6) initial # of sharks     : %4d\r\n", initialSharks);
+
+        textcolor(COLOR_YELLOW);
+        cputsxy(2, 15, "s) start simulation");
+        cputsxy(2, 16, "q) quit program");
+
+        textcolor(COLOR_GRAY3);
+        cputsxy(2, 19, "your choice: ");
+
+        cmd = getkey(1);
+        cputc(cmd);
+
+        switch (cmd)
         {
-            cgetc();
+        case '1':
+            /* todo */
+            break;
+
+        case '2':
+            fishTimeToReproduce = getValue(1, 255, fishTimeToReproduce);
+            break;
+
+        case '3':
+            sharkTimeToReproduce = getValue(1, 255, sharkTimeToReproduce);
+            break;
+
+        case '4':
+            initialSharkEnergy = getValue(1, 255, initialSharkEnergy);
+            break;
+
+        case '6':
+            initialSharks = getValue(1, 3000, initialSharks);
+            break;
+
+        case '5':
+            initialFish = getValue(1, 3000, initialFish);
+            break;
+
+        case 's':
+        {
+            setWatorScreen();
+            initWorld(initialFish, initialSharks);
+            gens = mainloop();
+            dealloc();
+            setTextScreen();
         }
-        cursor(1);
-        yn = cgetc();
-        cursor(0);
-    } while (yn != 'n');
-    clrscr();
+        break;
+
+        default:
+            break;
+        }
+
+    } while (!quit);
     printf("\n\ntschuessn!");
 }
