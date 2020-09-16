@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 // #include <stddef.h>
+#include <6502.h>
 #include <conio.h>
 #include <c64.h>
 #include "types.h"
@@ -70,8 +71,6 @@ int initialSharks;
 int initialFish;
 
 unsigned int idx;
-
-void doFish(void);
 
 void initDefaults()
 {
@@ -357,11 +356,13 @@ int getValue(int min, int max, int stdVal)
     return retVal;
 }
 
+
 void main()
 {
     long gens;
     char cmd;
     byte quit = false;
+    struct regs r;
 
     initDefaults();
 
@@ -381,15 +382,15 @@ void main()
         cputs("s kleinert, september 2020\r\n");
         chline(40);
 
-        textcolor(COLOR_PURPLE);
-        cputsxy(2, 7, "1) instructions\r\n\r\n");
+        gotoxy(0,8);
+
 
         textcolor(COLOR_LIGHTBLUE);
-        cprintf("  2) fish reproduction time  : %4d\r\n", fishTimeToReproduce);
-        cprintf("  3) shark reproduction time : %4d\r\n", sharkTimeToReproduce);
-        cprintf("  4) initial shark energy    : %4d\r\n", initialSharkEnergy);
-        cprintf("  5) initial # of fish       : %4d\r\n", initialFish);
-        cprintf("  6) initial # of sharks     : %4d\r\n", initialSharks);
+        cprintf("  1) fish reproduction time  : %4d\r\n", fishTimeToReproduce);
+        cprintf("  2) shark reproduction time : %4d\r\n", sharkTimeToReproduce);
+        cprintf("  3) initial shark energy    : %4d\r\n", initialSharkEnergy);
+        cprintf("  4) initial # of fish       : %4d\r\n", initialFish);
+        cprintf("  5) initial # of sharks     : %4d\r\n", initialSharks);
 
         textcolor(COLOR_YELLOW);
         cputsxy(2, 15, "s) start simulation");
@@ -403,23 +404,20 @@ void main()
 
         switch (cmd)
         {
+  
         case '1':
-            /* todo */
-            break;
-
-        case '2':
             fishTimeToReproduce = getValue(1, 255, fishTimeToReproduce);
             break;
 
-        case '3':
+        case '2':
             sharkTimeToReproduce = getValue(1, 255, sharkTimeToReproduce);
             break;
 
-        case '4':
+        case '3':
             initialSharkEnergy = getValue(1, 255, initialSharkEnergy);
             break;
 
-        case '6':
+        case '4':
             initialSharks = getValue(1, 3000, initialSharks);
             break;
 
@@ -427,6 +425,7 @@ void main()
             initialFish = getValue(1, 3000, initialFish);
             break;
 
+        case '\n':
         case 's':
         {
             setWatorScreen();
@@ -436,6 +435,12 @@ void main()
             setTextScreen();
         }
         break;
+
+        case 'q':
+            r.pc = 58552U;
+            _sys(&r);
+            exit(0);
+            break;
 
         default:
             break;
