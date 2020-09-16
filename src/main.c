@@ -89,9 +89,9 @@ void init()
     mega65_io_enable();
 
     POKE(0xd030U, PEEK(0xd030U) | 4); // enable palette
-    POKE(0xd100U + 6, 0);
+    POKE(0xd100U + 6, 1);
     POKE(0xd200U + 6, 2); // nice sea blue
-    POKE(0xd300U + 6, 4);
+    POKE(0xd300U + 6, 6);
 }
 
 void dealloc()
@@ -379,7 +379,7 @@ void main()
 
         chline(40);
         cputs("wa-tor for the mega65\r\n");
-        cputs("s kleinert, september 2020\r\n");
+        cputs("s. kleinert, september 2020\r\n");
         chline(40);
 
         gotoxy(0,8);
