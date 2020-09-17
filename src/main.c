@@ -19,6 +19,7 @@
 
 #define UPDATE_SCREEN lcopy((long)canvas, 0xff80000, WSIZE)
 
+byte *vic3_ctl1 = (byte *)0xd016;
 byte *vic3_control = (byte *)0xd031;
 byte *vic3_border = (byte *)0xd020;
 byte *vic3_bg = (byte *)0xd021;
@@ -127,6 +128,7 @@ void setTextScreen()
 {
     *vic3_control &= (255 ^ 128); // disable 80chars
     *vic3_control &= (255 ^ 8);   // disable interlace
+    *vic3_ctl1 &= (255 ^ 3);      // reset xscl
     *vic3_scnptr4 = 0x00;
     *vic3_scnptr3 = 0x04;
     *vic3_scnptr2 = 0x00;
@@ -142,6 +144,7 @@ void setWatorScreen()
 
     *vic3_control |= 128; // enable 80chars
     *vic3_control |= 8;   // enable interlace
+    *vic3_ctl1 |= 1;      // shift screen 1px to the right
     *vic3_bg = 0;
     *vic3_border = 0;
 
@@ -304,10 +307,14 @@ long mainloop(void)
     return generations;
 }
 
-void initWorld(int numFish, int numSharks)
+#define MAXTRIES 1000
+
+byte initWorld(int numFish, int numSharks)
 {
     int i;
     byte x, y;
+
+    int tries = 0;
 
     srand(290672); // fix random seed for reproducible results
 
@@ -328,16 +335,23 @@ void initWorld(int numFish, int numSharks)
         } while (canvas[x + (WIDTH * y)] != WT_WATER);
         canvas[x + (WIDTH * y)] = WT_FISH;
     }
+
     for (i = 0; i < numSharks; ++i)
     {
+        tries = 0;
         do
         {
+            tries++;
             x = rand() % WIDTH;
             y = rand() % HEIGHT;
-        } while (canvas[x + (WIDTH * y)] != WT_WATER);
+        } while (canvas[x + (WIDTH * y)] != WT_WATER && tries < MAXTRIES);
+        if (tries == MAXTRIES)
+        {
+            return false;
+        }
         canvas[x + (WIDTH * y)] = WT_SHARK;
     }
-    UPDATE_SCREEN;
+    return true;
 }
 
 int getValue(int min, int max, int stdVal)
@@ -355,7 +369,6 @@ int getValue(int min, int max, int stdVal)
     }
     return retVal;
 }
-
 
 void main()
 {
@@ -382,10 +395,9 @@ void main()
         cputs("s. kleinert, september 2020\r\n");
         chline(40);
 
-        gotoxy(0,8);
+        gotoxy(0, 8);
 
-
-        textcolor(COLOR_LIGHTBLUE);
+        textcolor(COLOR_WHITE);
         cprintf("  1) fish reproduction time  : %4d\r\n", fishTimeToReproduce);
         cprintf("  2) shark reproduction time : %4d\r\n", sharkTimeToReproduce);
         cprintf("  3) initial shark energy    : %4d\r\n", initialSharkEnergy);
@@ -404,7 +416,7 @@ void main()
 
         switch (cmd)
         {
-  
+
         case '1':
             fishTimeToReproduce = getValue(1, 255, fishTimeToReproduce);
             break;
@@ -417,21 +429,41 @@ void main()
             initialSharkEnergy = getValue(1, 255, initialSharkEnergy);
             break;
 
-        case '5':
-            initialSharks = getValue(1, 3000, initialSharks);
-            break;
-
         case '4':
             initialFish = getValue(1, 3000, initialFish);
             break;
 
+        case '5':
+            initialSharks = getValue(1, 3000, initialSharks);
+            break;
+
         case 's':
         {
-            setWatorScreen();
-            initWorld(initialFish, initialSharks);
-            gens = mainloop();
-            dealloc();
-            setTextScreen();
+            clrscr();
+            if (initialSharkEnergy > sharkTimeToReproduce)
+            {
+                cputs("error: initial shark energy is greater\r\n"
+                      "than shark reproduction time!\r\n\r\n"
+                      "--key--");
+                getkey(0);
+                break;
+            }
+
+            if (initWorld(initialFish, initialSharks))
+            {
+                setWatorScreen();
+                gens = mainloop();
+                dealloc();
+                setTextScreen();
+            }
+            else
+            {
+                cputs("error: could not fit sharks.\r\n"
+                      "try creating less sharks or less fish.\r\n\r\n"
+                      "--key--");
+                getkey(0);
+                dealloc();
+            }
         }
         break;
 
