@@ -1,1 +1,0 @@
-char *convert(unsigned int num, int base);

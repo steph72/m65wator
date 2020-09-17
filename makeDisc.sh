@@ -9,6 +9,6 @@ cat utils/wrapper.prg bin/wa-tor.prg > bin/wrapped.prg
 
 c1541 <<EOF
 attach disc/wa-tor.d81
-delete m65wator.prg
-write bin/wrapped.prg m65wator.prg
+delete m65wator
+write bin/wrapped.prg m65wator
 EOF

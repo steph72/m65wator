@@ -1,12 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
-// #include <stddef.h>
 #include <6502.h>
 #include <conio.h>
 #include <c64.h>
 #include "types.h"
 #include "memory.h"
-#include "utils.h"
 
 #define WT_WATER 6
 #define WT_FISH 5
@@ -205,7 +203,7 @@ void doShark(void)
     unsigned int newIdx;
     byte ctest;
 
-    int newSharkIndex = idx;
+    unsigned int newSharkIndex = idx;
     byte didEat = false;
     byte *dirPermutation = dirPermutations[rand() % 16];
 
